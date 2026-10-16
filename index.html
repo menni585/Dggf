@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Empire - Realistischer Mode-Business Simulator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col">
+
+    <!-- START SCREEN (Modal) -->
+    <div id="start-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="inline-block p-3 bg-indigo-500/10 rounded-full text-indigo-400 mb-3">
+                    <i data-lucide="shirt" class="w-10 h-10"></i>
+                </div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">Fashion Empire Simulator</h1>
+                <p class="text-gray-400 text-sm mt-1">Gründe dein eigenes Modelabel und führe es zum weltweiten Erfolg.</p>
+            </div>
+
+            <form id="start-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Brand Name</label>
+                    <input type="text" id="brand-name-input" required placeholder="z.B. L'Avenir Apparel" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Zielgruppe & Nische</label>
+                    <select id="brand-target-input" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="streetwear">Streetwear (Hohes Hype-Potenzial, moderate Preissensibilität)</option>
+                        <option value="luxury">Luxury / High Fashion (Hohe Marge, sehr anspruchsvoll)</option>
+                        <option value="sustainable">Sustainable Eco-Wear (Treue Kunden, höhere Rohstoffkosten)</option>
+                        <option value="fastfashion">Fast Fashion (Hohe Stückzahlen, niedrige Marge)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Startkapital / Schwierigkeit</label>
+                    <select id="brand-difficulty-input" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="easy">Bootstrapped (15.000 € - Einfach)</option>
+                        <option value="medium" selected>Angel Investor (35.000 € - Realistisch)</option>
+                        <option value="hard">Venture Capital (75.000 € - Schnell skalieren oder scheitern)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-all shadow-lg shadow-indigo-600/30 mt-6">
+                    Label Gründen & Starten
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP STRUCTURE -->
+    <div id="app" class="flex-1 flex flex-col hidden">
+        <!-- HEADER / NAVIGATION -->
+        <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-indigo-400"></i>
+                    <div>
+                        <h2 id="brand-display-name" class="font-bold text-white text-lg leading-tight">Brand</h2>
+                        <span id="brand-display-target" class="text-xs text-indigo-400 capitalize">Nische</span>
+                    </div>
+                </div>
+
+                <!-- KEY STATS HEADER -->
+                <div class="flex items-center space-x-6 text-sm">
+                    <div class="flex items-center space-x-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700">
+                        <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+                        <span class="text-gray-400">Bank:</span>
+                        <span id="stat-cash" class="font-semibold text-emerald-400">0 €</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700">
+                        <i data-lucide="calendar" class="w-4 h-4 text-indigo-400"></i>
+                        <span class="text-gray-400">Datum:</span>
+                        <span id="stat-date" class="font-semibold text-white">Monat 1 (Frühling)</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700">
+                        <i data-lucide="flame" class="w-4 h-4 text-amber-400"></i>
+                        <span class="text-gray-400">Hype:</span>
+                        <span id="stat-hype" class="font-semibold text-amber-400">0%</span>
+                    </div>
+                </div>
+
+                <!-- NEXT MONTH BUTTON -->
+                <button id="btn-next-month" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium px-5 py-2 rounded-lg flex items-center space-x-2 transition shadow-lg shadow-teal-900/40">
+                    <span>Nächster Monat</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- SUB-NAV / TABS -->
+        <nav class="bg-gray-900/50 border-b border-gray-800 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto flex space-x-2 overflow-x-auto py-2">
+                <button class="nav-tab active text-indigo-400 border-b-2 border-indigo-500 px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="dashboard">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>Übersicht</span>
+                </button>
+                <button class="nav-tab text-gray-400 hover:text-white px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="products">
+                    <i data-lucide="scissors" class="w-4 h-4"></i><span>Kollektion & Produktion</span>
+                </button>
+                <button class="nav-tab text-gray-400 hover:text-white px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="inventory">
+                    <i data-lucide="boxes" class="w-4 h-4"></i><span>Lager & Preise</span>
+                </button>
+                <button class="nav-tab text-gray-400 hover:text-white px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="marketing">
+                    <i data-lucide="megaphone" class="w-4 h-4"></i><span>Marketing & Kanäle</span>
+                </button>
+                <button class="nav-tab text-gray-400 hover:text-white px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="finances">
+                    <i data-lucide="line-chart" class="w-4 h-4"></i><span>Finanzen & GuV</span>
+                </button>
+                <button class="nav-tab text-gray-400 hover:text-white px-4 py-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap" data-tab="academy">
+                    <i data-lucide="graduation-cap" class="w-4 h-4"></i><span>Fashion Academy</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- CONTENT AREA -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+            
+            <!-- SECTION: DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                        <span class="text-xs text-gray-400 uppercase font-semibold">Umsatz (Letzter Monat)</span>
+                        <div id="dash-revenue" class="text-2xl font-bold text-white mt-1">0 €</div>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                        <span class="text-xs text-gray-400 uppercase font-semibold">Gewinn (Letzter Monat)</span>
+                        <div id="dash-profit" class="text-2xl font-bold text-white mt-1">0 €</div>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                        <span class="text-xs text-gray-400 uppercase font-semibold">Lagerbestand Total</span>
+                        <div id="dash-inventory" class="text-2xl font-bold text-white mt-1">0 Stk.</div>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                        <span class="text-xs text-gray-400 uppercase font-semibold">Fixkosten / Monat</span>
+                        <div id="dash-fixedcosts" class="text-2xl font-bold text-rose-400 mt-1">850 €</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- MAIN CHART -->
+                    <div class="lg:col-span-2 bg-gray-900 border border-gray-800 p-5 rounded-xl flex flex-col">
+                        <h3 class="font-bold text-lg mb-4 text-white flex items-center justify-between">
+                            <span>Finanzentwicklung</span>
+                            <span class="text-xs text-gray-400 font-normal">Umsatz vs. Gewinn</span>
+                        </h3>
+                        <div class="flex-1 min-h-[280px]">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- RECENT NEWS & NOTIFICATIONS -->
+                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl flex flex-col">
+                        <h3 class="font-bold text-lg mb-4 text-white">Monatsberichte & Events</h3>
+                        <div id="log-list" class="flex-1 space-y-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar text-sm">
+                            <div class="p-3 bg-gray-800/50 rounded-lg text-gray-300 border-l-2 border-indigo-500">
+                                Herzlichen Glückwunsch zur Gründung! Erstelle im Bereich <b>Kollektion</b> dein erstes Kleidungsstück.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: PRODUCTS & PRODUCTION -->
+            <section id="tab-products" class="tab-content hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-white mb-2">Neues Produkt entwickeln & Produzieren</h3>
+                    <p class="text-gray-400 text-sm mb-6">Wähle Bekleidungsart, Material und Produktionsort. Achte auf Fertigungsdauer und Mindestbestellmenge (MOQ).</p>
+
+                    <form id="product-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Produkt-Typ</label>
+                            <select id="prod-type" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white">
+                                <option value="tshirt">T-Shirt (Basis: 8 €)</option>
+                                <option value="hoodie">Hoodie / Sweatshirt (Basis: 18 €)</option>
+                                <option value="pants">Jeans / Hose (Basis: 22 €)</option>
+                                <option value="jacket">Jacke / Mantelsegment (Basis: 45 €)</option>
+                                <option value="accessory">Accessoire / Cap (Basis: 5 €)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Produkt-Name</label>
+                            <input type="text" id="prod-name" required placeholder="z.B. Heavyweight Oversized Tee" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Material-Qualität</label>
+                            <select id="prod-material" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white">
+                                <option value="standard">Standard Mix (+0% Cost, Normal)</option>
+                                <option value="organic">Organic Cotton / Sustainable (+35% Cost, +Hype)</option>
+                                <option value="premium">Heavyweight Premium GSM (+60% Cost, +Marge)</option>
+                                <option value="silk">Luxury / Fine Materials (+120% Cost, High-End)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Produktionsort / Sourcing</label>
+                            <select id="prod-supplier" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white">
+                                <option value="asia">Übersee / Asien (Günstig, Dauer: 2 Monate, MOQ: 300 Stk)</option>
+                                <option value="europe">Europa / Portugal (Mittel, Dauer: 1 Monat, MOQ: 100 Stk)</option>
+                                <option value="local">Lokal / Deutschland (Teuer, Dauer: 0 Monate, MOQ: 30 Stk)</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-xs text-gray-400 mb-1">Bestellmenge (Stück)</label>
+                            <input type="number" id="prod-quantity" min="30" value="100" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white">
+                        </div>
+
+                        <div class="md:col-span-2 flex items-end">
+                            <div class="w-full bg-gray-800/60 p-3 rounded-lg border border-gray-700 flex justify-between items-center mr-4">
+                                <div>
+                                    <span class="text-xs text-gray-400 block">Kalkulierte Stückkosten (COGS):</span>
+                                    <span id="calc-unit-cost" class="font-bold text-indigo-400">0.00 €</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs text-gray-400 block">Gesamtkosten Produktion:</span>
+                                    <span id="calc-total-cost" class="font-bold text-emerald-400">0.00 €</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium whitespace-nowrap h-[50px]">
+                                In Auftrag geben
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- RUNNING PRODUCTIONS LIST -->
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-white mb-4">Aktuelle Produktionsaufträge</h3>
+                    <div id="production-list" class="space-y-3">
+                        <p class="text-gray-500 text-sm">Keine aktiven Produktionen in der Pipeline.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: INVENTORY & PRICING -->
+            <section id="tab-inventory" class="tab-content hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-white mb-2">Lagerbestand & Verkaufspreise</h3>
+                    <p class="text-gray-400 text-sm mb-6">Setze Verkaufspreise fest. Beachte Richtwerte: Faustregel im Fashion Retail ist Mindestfaktor 2.5x - 4x der Selbstkosten.</p>
+
+                    <div id="inventory-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <p class="text-gray-500 text-sm col-span-full">Keine Artikel auf Lager. Starte erst eine Produktion im Bereich "Kollektion".</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: MARKETING & CHANNELS -->
+            <section id="tab-marketing" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- MARKETING CAMPAIGNS -->
+                    <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                        <h3 class="text-xl font-bold text-white mb-2">Marketing-Kampagnen</h3>
+                        <p class="text-gray-400 text-sm mb-4">Erhöhe deine Markenbekanntheit (Hype) und baue Traffic auf.</p>
+
+                        <div class="space-y-4">
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">Meta / Social Media Ads</h4>
+                                    <p class="text-xs text-gray-400">Gezielte Performance-Werbung auf Instagram/TikTok.</p>
+                                    <span class="text-xs text-indigo-400 font-semibold mt-1 inline-block">Kosten: 500 € / Monat</span>
+                                </div>
+                                <button onclick="toggleMarketing('social')" id="btn-mkt-social" class="bg-gray-800 border border-gray-700 hover:border-indigo-500 px-4 py-2 rounded-lg text-sm">Aktivieren</button>
+                            </div>
+
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">Influencer Seeding</h4>
+                                    <p class="text-xs text-gray-400">Kostenlose Samples an Creator senden für Hype.</p>
+                                    <span class="text-xs text-indigo-400 font-semibold mt-1 inline-block">Kosten: 1.200 € / Monat</span>
+                                </div>
+                                <button onclick="toggleMarketing('influencer')" id="btn-mkt-influencer" class="bg-gray-800 border border-gray-700 hover:border-indigo-500 px-4 py-2 rounded-lg text-sm">Aktivieren</button>
+                            </div>
+
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">Pop-Up Store Events</h4>
+                                    <p class="text-xs text-gray-400">Exklusive In-Real-Life Events in Metropolen.</p>
+                                    <span class="text-xs text-indigo-400 font-semibold mt-1 inline-block">Kosten: 3.500 € / Monat</span>
+                                </div>
+                                <button onclick="toggleMarketing('popup')" id="btn-mkt-popup" class="bg-gray-800 border border-gray-700 hover:border-indigo-500 px-4 py-2 rounded-lg text-sm">Aktivieren</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SALES CHANNELS -->
+                    <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                        <h3 class="text-xl font-bold text-white mb-2">Vertriebskanäle (Channels)</h3>
+                        <p class="text-gray-400 text-sm mb-4">Erschließe neue Wege, deine Mode zu verkaufen.</p>
+
+                        <div class="space-y-4">
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">D2C E-Commerce Shop</h4>
+                                    <p class="text-xs text-gray-400">Eigenes Shopify-Store Front. Hohe Margen.</p>
+                                    <span class="text-xs text-emerald-400 font-semibold mt-1 inline-block">Status: Aktiv (Basis)</span>
+                                </div>
+                                <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded">Freigeschaltet</span>
+                            </div>
+
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">B2B Großhandel / Boutiquen</h4>
+                                    <p class="text-xs text-gray-400">Verkaufe in großen Stückzahlen an Boutiquen (-50% Marge).</p>
+                                    <span class="text-xs text-amber-400 font-semibold mt-1 inline-block">Freischaltung: 2.500 € (Einmalig)</span>
+                                </div>
+                                <button id="btn-chan-b2b" onclick="unlockChannel('b2b', 2500)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm">Kaufen</button>
+                            </div>
+
+                            <div class="border border-gray-800 bg-gray-800/30 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white">Eigener Flagship Store</h4>
+                                    <p class="text-xs text-gray-400">Eigener Retail Laden in Bestlage (+2.000 €/Mo Fixkosten).</p>
+                                    <span class="text-xs text-amber-400 font-semibold mt-1 inline-block">Freischaltung: 12.000 € (Einmalig)</span>
+                                </div>
+                                <button id="btn-chan-retail" onclick="unlockChannel('retail', 12000)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm">Kaufen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: FINANCES & PnL -->
+            <section id="tab-finances" class="tab-content hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-white mb-4">Gewinn- und Verlustrechnung (GuV)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
+                                <tr>
+                                    <th class="p-3">Posten</th>
+                                    <th class="p-3 text-right">Letzter Monat</th>
+                                    <th class="p-3 text-right">Kumuliert Gesamterzeit</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <tr>
+                                    <td class="p-3 font-medium text-white">Bruttoumsatz (Sales)</td>
+                                    <td id="pnl-rev-last" class="p-3 text-right text-emerald-400">0 €</td>
+                                    <td id="pnl-rev-total" class="p-3 text-right text-emerald-400">0 €</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 text-gray-300 pl-6">- Wareneinsatz (COGS)</td>
+                                    <td id="pnl-cogs-last" class="p-3 text-right text-rose-400">0 €</td>
+                                    <td id="pnl-cogs-total" class="p-3 text-right text-rose-400">0 €</td>
+                                </tr>
+                                <tr class="bg-gray-800/30 font-semibold">
+                                    <td class="p-3 text-indigo-300">= Rohertrag (Gross Profit)</td>
+                                    <td id="pnl-gross-last" class="p-3 text-right text-indigo-300">0 €</td>
+                                    <td id="pnl-gross-total" class="p-3 text-right text-indigo-300">0 €</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 text-gray-300 pl-6">- Marketingausgaben</td>
+                                    <td id="pnl-mkt-last" class="p-3 text-right text-rose-400">0 €</td>
+                                    <td id="pnl-mkt-total" class="p-3 text-right text-rose-400">0 €</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 text-gray-300 pl-6">- Fixkosten (Miete, Software, Team)</td>
+                                    <td id="pnl-fix-last" class="p-3 text-right text-rose-400">0 €</td>
+                                    <td id="pnl-fix-total" class="p-3 text-right text-rose-400">0 €</td>
+                                </tr>
+                                <tr class="bg-gray-800 font-bold text-base">
+                                    <td class="p-3 text-white">= Netto-Gewinn / Verlust</td>
+                                    <td id="pnl-net-last" class="p-3 text-right text-white">0 €</td>
+                                    <td id="pnl-net-total" class="p-3 text-right text-white">0 €</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: ACADEMY / TUTORIAL -->
+            <section id="tab-academy" class="tab-content hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-white mb-2">Fashion Business Knowledge</h3>
+                    <p class="text-gray-400 text-sm mb-6">Wichtige Kennzahlen und Real-Life Lektionen für den Aufbau einer Modemarke.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="border border-gray-800 p-4 rounded-lg bg-gray-800/20">
+                            <h4 class="font-bold text-indigo-400 mb-1">1. COGS & Multiplier (Keystone Markup)</h4>
+                            <p class="text-sm text-gray-300">
+                                Im echten Modebusiness kosten Produktion + Import z.B. 20 € (COGS). Um profitabel zu sein, muss der Verkaufspreis im D2C (Direct-to-Consumer) Bereich das 3- bis 5-fache betragen (z.B. 80-100 €), um Retouren, Marketing & Versand zu decken.
+                            </p>
+                        </div>
+
+                        <div class="border border-gray-800 p-4 rounded-lg bg-gray-800/20">
+                            <h4 class="font-bold text-indigo-400 mb-1">2. MOQ (Minimum Order Quantity) & Lead Times</h4>
+                            <p class="text-sm text-gray-300">
+                                Fabriken in Übersee verlangen hohe Mindestbestellmengen (MOQ), sind aber günstig. Die Produktion und Seefracht dauert aber 2-3 Monate. Wer zu spät nachbestellt, hat wochenlang kein Lagerbestand ("Stockout").
+                            </p>
+                        </div>
+
+                        <div class="border border-gray-800 p-4 rounded-lg bg-gray-800/20">
+                            <h4 class="font-bold text-indigo-400 mb-1">3. CAC vs. LTV (Kundenakquisition)</h4>
+                            <p class="text-sm text-gray-300">
+                                Über Online-Werbung (Meta/TikTok) Kunden zu gewinnen wird immer teurer. Wenn die Kundengewinnung (CAC) 30 € kostet, der Gewinn pro T-Shirt aber nur 20 € beträgt, verlierst du Geld trotz hoher Verkäufe!
+                            </p>
+                        </div>
+
+                        <div class="border border-gray-800 p-4 rounded-lg bg-gray-800/20">
+                            <h4 class="font-bold text-indigo-400 mb-1">4. Saisonale Schwankungen</h4>
+                            <p class="text-sm text-gray-300">
+                                Mode verläuft in Saisons: Frühling/Sommer (SS) und Herbst/Winter (FW). Im Winter verkaufen sich dicke Hoodies und Jacken gut, im Sommer dominieren T-Shirts und Accessoires.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        // GAME STATE
+        let gameState = {
+            brandName: "",
+            target: "streetwear",
+            month: 1,
+            cash: 35000,
+            hype: 10, // 0 - 100%
+            fixedCosts: 850,
+            activeMarketing: {
+                social: false,
+                influencer: false,
+                popup: false
+            },
+            channels: {
+                d2c: true,
+                b2b: false,
+                retail: false
+            },
+            products: [], // Inventory & Priced Products
+            productions: [], // Products currently in manufacturing
+            history: [], // Monthly PnL history
+            cumulativePnL: {
+                revenue: 0,
+                cogs: 0,
+                marketing: 0,
+                fixedCosts: 0,
+                netProfit: 0
+            }
+        };
+
+        const SEASONS = ["Frühling", "Sommer", "Herbst", "Winter"];
+
+        // BASE COSTS FOR CLOTHING TYPES
+        const BASE_COSTS = {
+            tshirt: 8,
+            hoodie: 18,
+            pants: 22,
+            jacket: 45,
+            accessory: 5
+        };
+
+        const MATERIAL_MULTIPLIERS = {
+            standard: 1.0,
+            organic: 1.35,
+            premium: 1.60,
+            silk: 2.20
+        };
+
+        const SUPPLIERS = {
+            asia: { costMult: 0.85, leadTime: 2, moq: 300 },
+            europe: { costMult: 1.15, leadTime: 1, moq: 100 },
+            local: { costMult: 1.60, leadTime: 0, moq: 30 }
+        };
+
+        let chartInstance = null;
+
+        // INIT ICON ENGINE
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setupEventListeners();
+            updateCalculatedCosts();
+        });
+
+        function setupEventListeners() {
+            // Start Game
+            document.getElementById('start-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                gameState.brandName = document.getElementById('brand-name-input').value;
+                gameState.target = document.getElementById('brand-target-input').value;
+                const difficulty = document.getElementById('brand-difficulty-input').value;
+
+                if (difficulty === 'easy') gameState.cash = 15000;
+                if (difficulty === 'medium') gameState.cash = 35000;
+                if (difficulty === 'hard') gameState.cash = 75000;
+
+                document.getElementById('start-modal').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+
+                document.getElementById('brand-display-name').innerText = gameState.brandName;
+                document.getElementById('brand-display-target').innerText = gameState.target;
+
+                initChart();
+                updateUI();
+            });
+
+            // Tabs Navigation
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.nav-tab').forEach(t => {
+                        t.classList.remove('active', 'text-indigo-400', 'border-b-2', 'border-indigo-500');
+                        t.classList.add('text-gray-400');
+                    });
+                    tab.classList.add('active', 'text-indigo-400', 'border-b-2', 'border-indigo-500');
+                    tab.classList.remove('text-gray-400');
+
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.remove('hidden');
+                });
+            });
+
+            // Production Form Calculation listeners
+            ['prod-type', 'prod-material', 'prod-supplier', 'prod-quantity'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateCalculatedCosts);
+                document.getElementById(id).addEventListener('input', updateCalculatedCosts);
+            });
+
+            // Submit Production
+            document.getElementById('product-form').addEventListener('submit', handleStartProduction);
+
+            // Next Month Button
+            document.getElementById('btn-next-month').addEventListener('click', processNextMonth);
+        }
+
+        // CALCULATE COGS IN REALTIME FOR FORM
+        function updateCalculatedCosts() {
+            const type = document.getElementById('prod-type').value;
+            const material = document.getElementById('prod-material').value;
+            const supplierKey = document.getElementById('prod-supplier').value;
+            const qty = parseInt(document.getElementById('prod-quantity').value) || 0;
+
+            const supplier = SUPPLIERS[supplierKey];
+            const unitCost = BASE_COSTS[type] * MATERIAL_MULTIPLIERS[material] * supplier.costMult;
+            const totalCost = unitCost * qty;
+
+            document.getElementById('calc-unit-cost').innerText = unitCost.toFixed(2) + " €";
+            document.getElementById('calc-total-cost').innerText = totalCost.toFixed(2) + " €";
+
+            // Enforce MOQ UI Warning
+            if (qty < supplier.moq) {
+                document.getElementById('prod-quantity').setCustomValidity(`Mindestbestellmenge (MOQ) bei diesem Lieferanten ist ${supplier.moq} Stk.`);
+            } else {
+                document.getElementById('prod-quantity').setCustomValidity('');
+            }
+        }
+
+        function handleStartProduction(e) {
+            e.preventDefault();
+            const type = document.getElementById('prod-type').value;
+            const name = document.getElementById('prod-name').value;
+            const material = document.getElementById('prod-material').value;
+            const supplierKey = document.getElementById('prod-supplier').value;
+            const qty = parseInt(document.getElementById('prod-quantity').value);
+
+            const supplier = SUPPLIERS[supplierKey];
+            if (qty < supplier.moq) {
+                alert(`Die Mindestbestellmenge (MOQ) beträgt ${supplier.moq} Stück!`);
+                return;
+            }
+
+            const unitCost = BASE_COSTS[type] * MATERIAL_MULTIPLIERS[material] * supplier.costMult;
+            const totalCost = unitCost * qty;
+
+            if (gameState.cash < totalCost) {
+                alert("Nicht genügend Kapital für diesen Produktionsauftrag vorhanden!");
+                return;
+            }
+
+            // Pay for production
+            gameState.cash -= totalCost;
+
+            gameState.productions.push({
+                id: Date.now(),
+                name: name,
+                type: type,
+                material: material,
+                qty: qty,
+                unitCost: unitCost,
+                remainingMonths: supplier.leadTime
+            });
+
+            logEvent(`Produktionsauftrag gestartet: <b>${qty}x ${name}</b>. Gesamtkosten: ${totalCost.toFixed(2)} €`);
+            document.getElementById('prod-name').value = '';
+            updateUI();
+        }
+
+        function toggleMarketing(type) {
+            gameState.activeMarketing[type] = !gameState.activeMarketing[type];
+            const btn = document.getElementById(`btn-mkt-${type}`);
+            if (gameState.activeMarketing[type]) {
+                btn.classList.add('bg-indigo-600', 'text-white');
+                btn.classList.remove('bg-gray-800');
+                btn.innerText = "Aktiviert";
+            } else {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-gray-800');
+                btn.innerText = "Aktivieren";
+            }
+        }
+
+        function unlockChannel(channel, cost) {
+            if (gameState.cash < cost) {
+                alert("Nicht genügend Guthaben für die Freischaltung!");
+                return;
+            }
+            gameState.cash -= cost;
+            gameState.channels[channel] = true;
+            if (channel === 'retail') gameState.fixedCosts += 2000;
+
+            const btn = document.getElementById(`btn-chan-${channel}`);
+            btn.parentElement.replaceChild(Object.assign(document.createElement('span'), {
+                className: "text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded",
+                innerText: "Freigeschaltet"
+            }), btn);
+
+            logEvent(`Neuer Vertriebskanal freigeschaltet: <b>${channel.toUpperCase()}</b>!`);
+            updateUI();
+        }
+
+        // MONTHLY SIMULATION ENGINE
+        function processNextMonth() {
+            gameState.month++;
+            const seasonIndex = Math.floor(((gameState.month - 1) % 12) / 3);
+            const currentSeason = SEASONS[seasonIndex];
+
+            // 1. Process Productions Pipeline
+            let completed = [];
+            gameState.productions.forEach(prod => {
+                prod.remainingMonths--;
+                if (prod.remainingMonths <= 0) {
+                    completed.push(prod);
+                }
+            });
+
+            completed.forEach(prod => {
+                gameState.productions = gameState.productions.filter(p => p.id !== prod.id);
+                // Check if product already in inventory
+                let existing = gameState.products.find(p => p.name === prod.name);
+                if (existing) {
+                    existing.qty += prod.qty;
+                } else {
+                    gameState.products.push({
+                        id: prod.id,
+                        name: prod.name,
+                        type: prod.type,
+                        unitCost: prod.unitCost,
+                        qty: prod.qty,
+                        price: Math.round(prod.unitCost * 3.0) // Default 3x markup
+                    });
+                }
+                logEvent(`✅ Production fertiggestellt: <b>${prod.qty}x ${prod.name}</b> liegt jetzt im Lager!`);
+            });
+
+            // 2. Calculate Marketing Spend & Impact
+            let marketingCost = 0;
+            let marketingDemandBoost = 1.0;
+
+            if (gameState.activeMarketing.social) {
+                marketingCost += 500;
+                marketingDemandBoost += 0.35;
+                gameState.hype = Math.min(100, gameState.hype + 3);
+            }
+            if (gameState.activeMarketing.influencer) {
+                marketingCost += 1200;
+                marketingDemandBoost += 0.65;
+                gameState.hype = Math.min(100, gameState.hype + 7);
+            }
+            if (gameState.activeMarketing.popup) {
+                marketingCost += 3500;
+                marketingDemandBoost += 1.2;
+                gameState.hype = Math.min(100, gameState.hype + 15);
+            }
+
+            // Hype Decay
+            gameState.hype = Math.max(5, gameState.hype - 2);
+
+            // 3. Process Sales / Demand Simulation
+            let monthlyRevenue = 0;
+            let monthlyCogs = 0;
+
+            gameState.products.forEach(prod => {
+                if (prod.qty <= 0) return;
+
+                // Demand Factors
+                let priceRatio = prod.price / (prod.unitCost * 3.5); // Baseline price ratio
+                let priceElasticity = Math.max(0.1, 2.0 - priceRatio); // Higher price = lower sales rate
+
+                // Seasonal Boost
+                let seasonalBoost = 1.0;
+                if ((prod.type === 'hoodie' || prod.type === 'jacket') && (currentSeason === 'Herbst' || currentSeason === 'Winter')) seasonalBoost = 1.6;
+                if ((prod.type === 'tshirt' || prod.type === 'accessory') && (currentSeason === 'Frühling' || currentSeason === 'Sommer')) seasonalBoost = 1.5;
+
+                // Calculate Sold Quantity
+                let baseDemand = 15 + (gameState.hype * 2.5);
+                let totalDemandMultiplier = priceElasticity * marketingDemandBoost * seasonalBoost;
+                
+                if (gameState.channels.b2b) totalDemandMultiplier *= 1.3;
+                if (gameState.channels.retail) totalDemandMultiplier *= 1.4;
+
+                let itemsSold = Math.floor(baseDemand * totalDemandMultiplier * (Math.random() * 0.4 + 0.8));
+                itemsSold = Math.min(itemsSold, prod.qty); // Cannot sell more than stock
+
+                if (itemsSold > 0) {
+                    prod.qty -= itemsSold;
+                    let revenue = itemsSold * prod.price;
+                    let cogs = itemsSold * prod.unitCost;
+
+                    monthlyRevenue += revenue;
+                    monthlyCogs += cogs;
+                }
+            });
+
+            // 4. Random Market Events (15% Chance)
+            if (Math.random() < 0.20) {
+                triggerRandomEvent();
+            }
+
+            // 5. Financial Deductions
+            let totalFixedCosts = gameState.fixedCosts;
+            let netProfit = monthlyRevenue - monthlyCogs - marketingCost - totalFixedCosts;
+
+            gameState.cash += netProfit;
+
+            // Update Cumulative PnL
+            gameState.cumulativePnL.revenue += monthlyRevenue;
+            gameState.cumulativePnL.cogs += monthlyCogs;
+            gameState.cumulativePnL.marketing += marketingCost;
+            gameState.cumulativePnL.fixedCosts += totalFixedCosts;
+            gameState.cumulativePnL.netProfit += netProfit;
+
+            // Log Financial History
+            gameState.history.push({
+                month: gameState.month,
+                revenue: monthlyRevenue,
+                profit: netProfit
+            });
+
+            logEvent(`<b>Monat ${gameState.month} beendet:</b> Umsatz: ${monthlyRevenue.toFixed(2)} € | Profit: ${netProfit.toFixed(2)} €`);
+
+            // Game Over Check
+            if (gameState.cash < -5000) {
+                alert(`INSOLVENZ! Dein Label "${gameState.brandName}" ist leider pleite gegangen. Das Guthaben reichte nicht mehr aus.`);
+                location.reload();
+            }
+
+            updateUI();
+        }
+
+        function triggerRandomEvent() {
+            const events = [
+                { text: "🔥 Viraler TikTok Trends! Ein Influencer hat unbezahlt dein Piece getragen. Hype +20%", action: () => gameState.hype = Math.min(100, gameState.hype + 20) },
+                { text: "📦 Zollverzögerungen beim Import! Lieferungen verzögern sich.", action: () => {} },
+                { text: "📉 Baumwollpreise weltweit gestiegen! Produktionskosten steigen leicht.", action: () => {} },
+                { text: "🏬 Lokal-Presse berichtet über dein Fashion-Label! Hype +10%", action: () => gameState.hype = Math.min(100, gameState.hype + 10) }
+            ];
+
+            const ev = events[Math.floor(Math.random() * events.length)];
+            ev.action();
+            logEvent(`⚡ <b>EVENT:</b> ${ev.text}`);
+        }
+
+        function updatePrice(productId, newPrice) {
+            let prod = gameState.products.find(p => p.id === productId);
+            if (prod) {
+                prod.price = parseFloat(newPrice) || prod.price;
+            }
+        }
+
+        function logEvent(msg) {
+            const logList = document.getElementById('log-list');
+            const entry = document.createElement('div');
+            entry.className = "p-3 bg-gray-800/50 rounded-lg text-gray-300 border-l-2 border-indigo-500 text-xs";
+            entry.innerHTML = msg;
+            logList.prepend(entry);
+        }
+
+        function updateUI() {
+            const seasonIndex = Math.floor(((gameState.month - 1) % 12) / 3);
+            const currentSeason = SEASONS[seasonIndex];
+
+            document.getElementById('stat-cash').innerText = gameState.cash.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            document.getElementById('stat-date').innerText = `Monat ${gameState.month} (${currentSeason})`;
+            document.getElementById('stat-hype').innerText = `${gameState.hype}%`;
+
+            // Dashboard KPI Cards
+            const lastHistory = gameState.history[gameState.history.length - 1] || { revenue: 0, profit: 0 };
+            document.getElementById('dash-revenue').innerText = lastHistory.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            document.getElementById('dash-profit').innerText = lastHistory.profit.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            
+            let totalStock = gameState.products.reduce((acc, p) => acc + p.qty, 0);
+            document.getElementById('dash-inventory').innerText = `${totalStock} Stk.`;
+            document.getElementById('dash-fixedcosts').innerText = `${gameState.fixedCosts} €`;
+
+            // Render Productions List
+            const prodList = document.getElementById('production-list');
+            if (gameState.productions.length === 0) {
+                prodList.innerHTML = `<p class="text-gray-500 text-sm">Keine aktiven Produktionen in der Pipeline.</p>`;
+            } else {
+                prodList.innerHTML = gameState.productions.map(p => `
+                    <div class="bg-gray-800/60 p-4 rounded-lg border border-gray-700 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${p.name}</h4>
+                            <span class="text-xs text-gray-400">Menge: ${p.qty} Stk. | Stückkosten: ${p.unitCost.toFixed(2)} €</span>
+                        </div>
+                        <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-3 py-1 rounded">
+                            Verbleibend: ${p.remainingMonths} Monate
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // Render Inventory & Pricing
+            const invContainer = document.getElementById('inventory-container');
+            if (gameState.products.length === 0) {
+                invContainer.innerHTML = `<p class="text-gray-500 text-sm col-span-full">Keine Artikel auf Lager. Starte erst eine Produktion im Bereich "Kollektion".</p>`;
+            } else {
+                invContainer.innerHTML = gameState.products.map(p => {
+                    const margin = p.price - p.unitCost;
+                    const marginPercent = ((margin / p.price) * 100).toFixed(0);
+                    return `
+                        <div class="bg-gray-800/60 p-4 rounded-lg border border-gray-700 space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-white">${p.name}</h4>
+                                    <span class="text-xs text-gray-400 capitalize">Typ: ${p.type}</span>
+                                </div>
+                                <span class="text-xs ${p.qty > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'} border px-2 py-0.5 rounded">
+                                    Lager: ${p.qty} Stk.
+                                </span>
+                            </div>
+
+                            <div class="text-xs text-gray-400 space-y-1">
+                                <div class="flex justify-between"><span>Herstellkosten (COGS):</span> <span class="text-gray-200">${p.unitCost.toFixed(2)} €</span></div>
+                                <div class="flex justify-between"><span>Gewinnmarge / Stk:</span> <span class="text-emerald-400 font-semibold">${margin.toFixed(2)} € (${marginPercent}%)</span></div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Verkaufspreis (D2C €)</label>
+                                <input type="number" value="${p.price}" onchange="updatePrice(${p.id}, this.value)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm font-semibold">
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Update PnL Table
+            document.getElementById('pnl-rev-last').innerText = lastHistory.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            document.getElementById('pnl-rev-total').innerText = gameState.cumulativePnL.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+
+            document.getElementById('pnl-cogs-last').innerText = `- ${(gameState.history.length ? (lastHistory.revenue > 0 ? gameState.cumulativePnL.cogs / gameState.history.length : 0) : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`;
+            document.getElementById('pnl-cogs-total').innerText = `- ${gameState.cumulativePnL.cogs.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`;
+
+            document.getElementById('pnl-net-last').innerText = lastHistory.profit.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            document.getElementById('pnl-net-total').innerText = gameState.cumulativePnL.netProfit.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+
+            updateChart();
+            lucide.createIcons();
+        }
+
+        // CHART.JS SETUP
+        function initChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Monat 1'],
+                    datasets: [
+                        {
+                            label: 'Umsatz (€)',
+                            data: [0],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Gewinn / Verlust (€)',
+                            data: [0],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#9ca3af' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+                        y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chartInstance) return;
+            const labels = gameState.history.map(h => `Monat ${h.month}`);
+            const revenueData = gameState.history.map(h => h.revenue);
+            const profitData = gameState.history.map(h => h.profit);
+
+            chartInstance.data.labels = labels;
+            chartInstance.data.datasets[0].data = revenueData;
+            chartInstance.data.datasets[1].data = profitData;
+            chartInstance.update();
+        }
+    </script>
+</body>
+</html>
